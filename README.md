@@ -27,7 +27,7 @@ Here is a usage example:
 
     try
     {
-        $result = $api->call($method, $arguments);
+        $result = $api->get('/me/videos', array('fields' => 'id,title,description'));
     }
     catch (DailymotionAuthRequiredException $e)
     {
@@ -53,17 +53,17 @@ responsibility to ask the user for its credentials. Make sure you API secret rem
 
     if (isset($_POST['username']) || isset($_POST['password']))
     {
-        $api->setGrantType(Dailymotion::GRANT_TYPE_PASSWORD, $apiKey, $apiSecret, $scope = 'read write'),
+        $api->setGrantType(Dailymotion::GRANT_TYPE_PASSWORD, $apiKey, $apiSecret, $scope = array('manage_videos'),
                            array('username' => $_POST['username'], 'password' => $_POST['password']));
     }
     else
     {
-        $api->setGrantType(Dailymotion::GRANT_TYPE_PASSWORD, $apiKey, $apiSecret, $scope = 'read write');
+        $api->setGrantType(Dailymotion::GRANT_TYPE_PASSWORD, $apiKey, $apiSecret, $scope = array('manage_videos'));
     }
 
     try
     {
-        $result = $api->call($method, $arguments);
+        $result = $api->get('/me/videos', array('fields' => 'id,title,description'));
     }
     catch (DailymotionAuthRequiredException $e)
     {
@@ -81,7 +81,7 @@ access to public data or private date of the user owning the API key.
 
     $api = new Dailymotion();
     $api->setGrantType(Dailymotion::GRANT_TYPE_CLIENT_CREDENTIALS, $apiKey, $apiSecret);
-    $result = $api->call($method, $arguments);
+    $result = $api->get('/videos', array('fields' => 'id,title,description'));
 
 ### File Upload
 
@@ -91,7 +91,7 @@ Certain methods like `POST /videos` requires a URL to a file. To create those UR
 
 You can then use this URL as an argument to methods requiring a URL parameter. For instance to create a video:
 
-    $result = $api->call('POST /videos', array('url' => $url));
+    $result = $api->post('/videos', array('url' => $url));
 
 Feedback
 --------

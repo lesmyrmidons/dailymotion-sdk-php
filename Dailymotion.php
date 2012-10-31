@@ -91,7 +91,8 @@ class Dailymotion
      *                      or Dailymotion::GRANT_TYPE_PASSWORD.
      * @param $apiKey the API key
      * @param $apiSecret the API secret
-     * @param $scope mixed the permission scope requested (can be none or any of 'read', 'write', 'delete').
+     * @param $scope mixed the permission scope requested (see http://www.dailymotion.com/doc/api/authentication.html#requesting-extended-permissions
+     *                     for a list of available permissions).
      *                     To requested several scope keys, use an array or separate keys by whitespaces.
      * @param $info Array info associated to the chosen grant type
      *
@@ -155,10 +156,11 @@ class Dailymotion
      * Get an authorization URL for use with redirects. By default, full page redirect is assumed.
      * If you are using a generated URL with a window.open() call in Javascript, you can pass in display=popup.
      *
-     * @param $scope Array a list of requested scope (allowed: create, read, update, delete)
+     * @param $scope Array a list of requested scope (see http://www.dailymotion.com/doc/api/authentication.html#requesting-extended-permissions
+     *                     for a list of available permissions)
      * @param $display String can be "page" (default, full page), "popup" or "mobile"
      */
-    public function getAuthorizationUrl($redirectUri = null, $scope = array(), $display = 'page')
+    public function getAuthorizationUrl($display = 'page')
     {
         if ($this->grantType !== self::GRANT_TYPE_AUTHORIZATION)
         {
@@ -170,7 +172,7 @@ class Dailymotion
             'response_type' => 'code',
             'client_id' => $this->grantInfo['key'],
             'redirect_uri' => $this->grantInfo['redirect_uri'],
-            'scope' => is_array($scope) ? implode(' ', $scope) : $scope,
+            'scope' => is_array($scope = $this->grantInfo['scope']) ? implode(' ', $scope) : $scope,
             'display' => $display,
         ), null, '&');
     }
@@ -184,7 +186,7 @@ class Dailymotion
      */
     public function uploadFile($filePath)
     {
-        $result = $this->call('file.upload');
+        $result = $this->get('/file/upload');
         $timeout = $this->timeout;
         $this->timeout = null;
         $result = json_decode($this->httpRequest($result['upload_url'], array('file' => '@' . $filePath)), true);
@@ -193,9 +195,33 @@ class Dailymotion
     }
 
     /**
+     * Alias for $api->call("GET $path")
+     */
+    public function get($path, $args = array())
+    {
+        return $this->call('GET ' . $path, $args);
+    }
+
+    /**
+     * Alias for $api->call("POST $path")
+     */
+    public function post($path, $args = array())
+    {
+        return $this->call('POST ' . $path, $args);
+    }
+
+    /**
+     * Alias for $api->delete("GET $path")
+     */
+    public function delete($path, $args = array())
+    {
+        return $this->call('DELETE ' . $path, $args);
+    }
+
+    /**
      * Call a remote method.
      *
-     * @param $method String the method name to call.
+     * @param $ressource String the method name to call.
      * @param $args Array an associative array of arguments.
      *
      * @return mixed the method response
@@ -462,13 +488,6 @@ class Dailymotion
      */
     protected function storeSession(Array $session = null)
     {
-        if ($session['grant_type'] != self::GRANT_TYPE_CLIENT_CREDENTIALS)
-        {
-            // Do not store session for grant type client_credentials as it would allow the end-user to perform
-            // API calls on behalf of the API key user.
-            return;
-        }
-
         if (headers_sent())
         {
             if (php_sapi_name() !== 'cli')
@@ -612,6 +631,7 @@ class Dailymotion
                 CURLOPT_CONNECTTIMEOUT => $this->connectionTimeout,
                 CURLOPT_TIMEOUT => $this->timeout,
                 CURLOPT_PROXY => $this->proxy,
+                CURLOPT_SSLVERSION => 3, // See http://bit.ly/I1OYCn
                 CURLOPT_USERAGENT => sprintf('Dailymotion-PHP/%s (PHP %s; %s)', self::VERSION, PHP_VERSION, php_sapi_name()),
                 CURLOPT_HEADER => true,
                 CURLOPT_RETURNTRANSFER => true,
@@ -653,7 +673,8 @@ class Dailymotion
         }
         $response_headers = $headers;
 
-        if ($this->debug) {
+        if ($this->debug)
+        {
             error_log(substr($response, $body_offset));
         }
 
